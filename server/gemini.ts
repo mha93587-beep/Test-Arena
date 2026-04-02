@@ -53,45 +53,24 @@ Requirements:
 - Questions must be appropriate for ${examType} examination standards
 - Vary the correct answer position (not all A)`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
-    const text = response.text?.trim() || '';
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: prompt,
+  });
+  const text = response.text?.trim() || '';
 
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure');
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure');
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(parsed)) throw new Error('Expected array of questions');
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(parsed)) throw new Error('Expected array of questions');
 
-    return parsed.slice(0, count);
-  } catch (error: any) {
-    console.error('Generation error:', error);
-    if (error.message?.includes('leaked') || error.message?.includes('403')) {
-      console.warn('API key leaked or forbidden. Returning mock questions for debugging.');
-      return Array.from({ length: count }).map((_, i) => ({
-        text: `Mock Question ${i + 1} for ${topic}?`,
-        options: [
-          { label: 'A', text: 'Option A' },
-          { label: 'B', text: 'Option B' },
-          { label: 'C', text: 'Option C' },
-          { label: 'D', text: 'Option D' }
-        ],
-        correct_answer: 'A',
-        explanation: 'This is a mock explanation.',
-        section: 'General',
-        hint: 'Mock hint'
-      }));
-    }
-    throw error;
-  }
+  return parsed.slice(0, count);
 }
 
 export async function extractTextFromBase64(base64: string, mimeType: string): Promise<string> {
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: {
       parts: [
         {
@@ -109,7 +88,7 @@ export async function extractTextFromBase64(base64: string, mimeType: string): P
 
 export async function extractTextFromUrl(url: string): Promise<string> {
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Fetch and summarize the main educational content from this URL for exam preparation purposes: ${url}`,
   });
   return response.text || '';
@@ -136,7 +115,7 @@ STRICT JSON FORMAT - respond ONLY with a valid JSON object matching the original
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       contents: prompt,
     });
     const text = response.text?.trim() || '';
@@ -147,28 +126,6 @@ STRICT JSON FORMAT - respond ONLY with a valid JSON object matching the original
     return JSON.parse(jsonMatch[0]);
   } catch (error: any) {
     console.error('Translation error:', error);
-    if (error.message?.includes('leaked') || error.message?.includes('403')) {
-      console.warn('API key leaked or forbidden. Returning mock translation for debugging.');
-      // Mock translation by appending the language code to text fields
-      const mockTranslate = (obj: any): any => {
-        if (typeof obj === 'string') return `${obj} [${targetLanguageCode}]`;
-        if (Array.isArray(obj)) return obj.map(mockTranslate);
-        if (typeof obj === 'object' && obj !== null) {
-          const newObj: any = {};
-          for (const key in obj) {
-            if (['id', 'testId', 'correctAnswer', 'correct_answer', 'label'].includes(key)) {
-              console.log(`Preserving key: ${key}, value: ${obj[key]}`);
-              newObj[key] = obj[key];
-            } else {
-              newObj[key] = mockTranslate(obj[key]);
-            }
-          }
-          return newObj;
-        }
-        return obj;
-      };
-      return mockTranslate(testData);
-    }
     throw error;
   }
 }
