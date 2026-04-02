@@ -65,7 +65,7 @@ const TestArena = () => {
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'speaking'>('idle');
 
   const { data, isLoading, error, isFetching } = useQuery<TestData>({
     queryKey: [`/api/tests/${testId}?lang=${lang}`],
@@ -81,7 +81,7 @@ const TestArena = () => {
   useEffect(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+      setSpeechState('idle');
     }
   }, [currentIndex]);
 
@@ -97,9 +97,9 @@ const TestArena = () => {
 
   const handleSpeak = useCallback(() => {
     if (!('speechSynthesis' in window)) return;
-    if (isSpeaking) {
+    if (speechState !== 'idle') {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+      setSpeechState('idle');
       return;
     }
     const q = data?.questions[currentIndex];
@@ -111,11 +111,12 @@ const TestArena = () => {
     utterance.rate = 0.88;
     utterance.pitch = 1;
     utterance.volume = 1;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onstart = () => setSpeechState('speaking');
+    utterance.onend = () => setSpeechState('idle');
+    utterance.onerror = () => setSpeechState('idle');
+    setSpeechState('loading');
     window.speechSynthesis.speak(utterance);
-  }, [isSpeaking, data, currentIndex, lang]);
+  }, [speechState, data, currentIndex, lang]);
 
   const handleSelect = useCallback((label: string) => {
     if (submitted) return;
@@ -359,16 +360,25 @@ const TestArena = () => {
               </h2>
               <button
                 onClick={handleSpeak}
-                title={isSpeaking ? "Stop reading" : "Read question aloud"}
+                title={speechState === 'speaking' ? "Stop reading" : speechState === 'loading' ? "Preparing…" : "Read question aloud"}
                 className={`flex-shrink-0 mt-0.5 w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm border ${
-                  isSpeaking
+                  speechState === 'speaking'
                     ? "bg-primary text-white border-primary animate-pulse"
+                    : speechState === 'loading'
+                    ? "bg-primary/10 text-primary border-primary/40"
                     : "bg-surface-container text-primary border-primary/20 hover:bg-primary/10 hover:border-primary/50"
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] filled">
-                  {isSpeaking ? "stop_circle" : "volume_up"}
-                </span>
+                {speechState === 'loading' ? (
+                  <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <span className="material-symbols-outlined text-[20px] filled">
+                    {speechState === 'speaking' ? "stop_circle" : "volume_up"}
+                  </span>
+                )}
               </button>
             </div>
 
