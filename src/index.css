@@ -1,1 +1,135 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --primary-container: 262 83% 95%;
+    --primary-fixed: 262 83% 90%;
+    --primary-fixed-dim: 262 83% 80%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary-container: 210 40% 93%;
+    --tertiary: 280 65% 55%;
+    --tertiary-foreground: 0 0% 100%;
+    --tertiary-container: 280 65% 95%;
+    --tertiary-fixed: 280 65% 90%;
+    --tertiary-fixed-dim: 280 65% 80%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --error: 0 84.2% 60.2%;
+    --error-container: 0 84.2% 95%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262 83% 58%;
+    --radius: 0.5rem;
+    --surface: 0 0% 100%;
+    --surface-bright: 0 0% 100%;
+    --surface-dim: 0 0% 95%;
+    --surface-container: 210 40% 96.1%;
+    --surface-container-low: 210 40% 98%;
+    --surface-container-high: 210 40% 94%;
+    --surface-container-highest: 210 40% 91%;
+    --surface-container-lowest: 0 0% 100%;
+    --surface-variant: 210 40% 93%;
+    --on-surface: 222.2 84% 4.9%;
+    --on-surface-variant: 215.4 16.3% 46.9%;
+    --outline: 214.3 31.8% 71.4%;
+    --outline-variant: 214.3 31.8% 91.4%;
+    --on-secondary-container: 222.2 47.4% 11.2%;
+    --on-tertiary-container: 280 65% 20%;
+    --on-error-container: 0 84.2% 20%;
+    --inverse-surface: 222.2 84% 10%;
+    --inverse-on-surface: 210 40% 98%;
+    --inverse-primary: 262 83% 78%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262 83% 70%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-container: 262 83% 20%;
+    --primary-fixed: 262 83% 25%;
+    --primary-fixed-dim: 262 83% 35%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --secondary-container: 217.2 32.6% 22%;
+    --tertiary: 280 65% 70%;
+    --tertiary-foreground: 222.2 47.4% 11.2%;
+    --tertiary-container: 280 65% 20%;
+    --tertiary-fixed: 280 65% 25%;
+    --tertiary-fixed-dim: 280 65% 35%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --error: 0 62.8% 60%;
+    --error-container: 0 62.8% 20%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262 83% 70%;
+    --surface: 222.2 84% 4.9%;
+    --surface-bright: 222.2 84% 8%;
+    --surface-dim: 222.2 84% 3%;
+    --surface-container: 217.2 32.6% 17.5%;
+    --surface-container-low: 217.2 32.6% 14%;
+    --surface-container-high: 217.2 32.6% 20%;
+    --surface-container-highest: 217.2 32.6% 24%;
+    --surface-container-lowest: 222.2 84% 4.9%;
+    --surface-variant: 217.2 32.6% 20%;
+    --on-surface: 210 40% 98%;
+    --on-surface-variant: 215 20.2% 65.1%;
+    --outline: 217.2 32.6% 37.5%;
+    --outline-variant: 217.2 32.6% 27%;
+    --on-secondary-container: 210 40% 98%;
+    --on-tertiary-container: 280 65% 90%;
+    --on-error-container: 0 84.2% 90%;
+    --inverse-surface: 210 40% 98%;
+    --inverse-on-surface: 222.2 84% 4.9%;
+    --inverse-primary: 262 83% 58%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

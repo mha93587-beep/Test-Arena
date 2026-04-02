@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, '..');
 
-const PORT = 3000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 const isDev = process.env.NODE_ENV !== 'production';
 
 async function startServer() {
