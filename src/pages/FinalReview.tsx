@@ -109,7 +109,7 @@ const FinalReview = () => {
   });
 
   const performanceLabel = accuracy >= 80 ? "Excellent" : accuracy >= 60 ? "Good" : accuracy >= 40 ? "Average" : "Needs Improvement";
-  const performanceColor = accuracy >= 80 ? "text-secondary" : accuracy >= 60 ? "text-primary" : accuracy >= 40 ? "text-yellow-600" : "text-error";
+  const performanceColor = accuracy >= 80 ? "text-green-600" : accuracy >= 60 ? "text-primary" : accuracy >= 40 ? "text-yellow-600" : "text-error";
 
   return (
     <>
@@ -167,7 +167,7 @@ const FinalReview = () => {
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
                     <circle className="text-surface-container-low" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
                     <circle
-                      className={accuracy >= 60 ? "text-secondary" : "text-primary"}
+                      className={accuracy >= 60 ? "text-green-500" : "text-primary"}
                       cx="96" cy="96" fill="transparent" r="88" stroke="currentColor"
                       strokeWidth="12" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
                     />
@@ -188,7 +188,7 @@ const FinalReview = () => {
               {/* Stats Grid */}
               <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { icon: "check_circle", label: "Correct", value: score, color: "text-secondary", bg: "bg-secondary/10" },
+                  { icon: "check_circle", label: "Correct", value: score, color: "text-green-600", bg: "bg-green-50" },
                   { icon: "cancel", label: "Incorrect", value: wrongCount, color: "text-error", bg: "bg-error/10" },
                   { icon: "schedule", label: "Time Taken", value: `${mins}m ${secs}s`, color: "text-primary", bg: "bg-primary/10" },
                   { icon: "speed", label: "Avg/Question", value: `${avgTimePerQ}s`, color: "text-tertiary", bg: "bg-tertiary/10" },
@@ -215,7 +215,7 @@ const FinalReview = () => {
                             </div>
                             <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all ${pct >= 60 ? "bg-secondary" : "bg-primary"}`}
+                                className={`h-full rounded-full transition-all ${pct >= 60 ? "bg-green-500" : "bg-primary"}`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -242,7 +242,7 @@ const FinalReview = () => {
                       data-testid={`accuracy-dot-${i + 1}`}
                       title={`Q${i + 1}: ${q.isCorrect ? "Correct" : q.selectedAnswer ? "Wrong" : "Skipped"} (${q.timeTakenSeconds}s)`}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer transition-transform hover:scale-110 ${
-                        q.isCorrect ? "bg-secondary/20 text-secondary border border-secondary/30"
+                        q.isCorrect ? "bg-green-100 text-green-600 border border-green-300"
                           : q.selectedAnswer ? "bg-error/20 text-error border border-error/30"
                             : "bg-surface-container text-on-surface-variant border border-outline-variant/20"
                       }`}
@@ -253,7 +253,7 @@ const FinalReview = () => {
                   ))}
                 </div>
                 <div className="flex gap-4 mt-4 text-xs text-on-surface-variant">
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-secondary/20 border border-secondary/30 inline-block" /> Correct</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-100 border border-green-300 inline-block" /> Correct</span>
                   <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-error/20 border border-error/30 inline-block" /> Wrong</span>
                   <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-surface-container border border-outline-variant/20 inline-block" /> Skipped</span>
                 </div>
@@ -276,7 +276,7 @@ const FinalReview = () => {
                         <span className="text-xs text-on-surface-variant w-8 text-right flex-shrink-0">Q{i + 1}</span>
                         <div className="flex-1 h-6 bg-surface-container rounded-lg overflow-hidden relative">
                           <div
-                            className={`h-full rounded-lg transition-all ${q.isCorrect ? "bg-secondary/40" : q.selectedAnswer ? "bg-error/40" : "bg-surface-container-high"}`}
+                            className={`h-full rounded-lg transition-all ${q.isCorrect ? "bg-green-400" : q.selectedAnswer ? "bg-error/40" : "bg-surface-container-high"}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -307,7 +307,7 @@ const FinalReview = () => {
                   >
                     <div className="flex items-start gap-3">
                       <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        q.isCorrect ? "bg-secondary/20 text-secondary" : q.selectedAnswer ? "bg-error/20 text-error" : "bg-surface-container text-on-surface-variant"
+                        q.isCorrect ? "bg-green-100 text-green-600" : q.selectedAnswer ? "bg-error/20 text-error" : "bg-surface-container text-on-surface-variant"
                       }`}>
                         {i + 1}
                       </span>
@@ -322,14 +322,14 @@ const FinalReview = () => {
                         <p className="text-sm font-medium text-on-surface line-clamp-2">{q.text}</p>
                         {q.selectedAnswer && (
                           <div className="flex items-center gap-3 mt-2 text-xs">
-                            <span className={`flex items-center gap-1 ${q.isCorrect ? "text-secondary" : "text-error"}`}>
+                            <span className={`flex items-center gap-1 ${q.isCorrect ? "text-green-600" : "text-error"}`}>
                               <span className="material-symbols-outlined text-sm filled">{q.isCorrect ? "check_circle" : "cancel"}</span>
                               Your answer: ({q.selectedAnswer}) {q.options.find((o) => o.label === q.selectedAnswer)?.text}
                             </span>
                           </div>
                         )}
                         {!q.isCorrect && q.correctAnswer && (
-                          <div className="flex items-center gap-1 mt-1 text-xs text-secondary">
+                          <div className="flex items-center gap-1 mt-1 text-xs text-green-600">
                             <span className="material-symbols-outlined text-sm filled">check_circle</span>
                             Correct: ({q.correctAnswer}) {q.options.find((o) => o.label === q.correctAnswer)?.text}
                           </div>
@@ -345,14 +345,14 @@ const FinalReview = () => {
                               key={opt.label}
                               className={`flex items-center gap-2 p-2.5 rounded-lg text-xs ${
                                 opt.label === q.correctAnswer
-                                  ? "bg-secondary/10 border border-secondary/30 text-on-surface"
+                                  ? "bg-green-50 border border-green-300 text-on-surface"
                                   : q.selectedAnswer === opt.label && opt.label !== q.correctAnswer
                                     ? "bg-error/10 border border-error/30 text-on-surface"
                                     : "bg-surface-container text-on-surface-variant"
                               }`}
                             >
                               <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0 ${
-                                opt.label === q.correctAnswer ? "bg-secondary text-white"
+                                opt.label === q.correctAnswer ? "bg-green-500 text-white"
                                   : q.selectedAnswer === opt.label ? "bg-error text-white"
                                     : "bg-surface-container-high text-on-surface-variant"
                               }`}>{opt.label}</span>

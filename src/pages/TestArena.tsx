@@ -183,7 +183,7 @@ const TestArena = () => {
         ? "bg-primary/8 border-2 border-primary"
         : "bg-surface-container-lowest border border-outline-variant/15 hover:bg-surface-container hover:shadow-sm";
     }
-    if (opt.label === q.correctAnswer) return "bg-secondary-container/20 border-2 border-secondary";
+    if (opt.label === q.correctAnswer) return "bg-green-50 border-2 border-green-500";
     if (selectedAnswer === opt.label && opt.label !== q.correctAnswer) return "bg-error-container/20 border-2 border-error";
     return "bg-surface-container-lowest border border-outline-variant/15 opacity-60";
   };
@@ -192,7 +192,7 @@ const TestArena = () => {
     if (!submitted) {
       return selectedAnswer === opt.label ? "bg-primary text-white" : "bg-surface-container-high text-on-surface-variant";
     }
-    if (opt.label === q.correctAnswer) return "bg-secondary text-white";
+    if (opt.label === q.correctAnswer) return "bg-green-500 text-white";
     if (selectedAnswer === opt.label) return "bg-error text-white";
     return "bg-surface-container-high text-on-surface-variant";
   };
@@ -297,7 +297,7 @@ const TestArena = () => {
                   </span>
                   <span className="font-body text-sm md:text-base text-on-surface">{opt.text}</span>
                   {submitted && opt.label === q.correctAnswer && (
-                    <span className="material-symbols-outlined text-secondary ml-auto text-xl filled">check_circle</span>
+                    <span className="material-symbols-outlined text-green-500 ml-auto text-xl filled">check_circle</span>
                   )}
                   {submitted && selectedAnswer === opt.label && opt.label !== q.correctAnswer && (
                     <span className="material-symbols-outlined text-error ml-auto text-xl filled">cancel</span>
@@ -308,8 +308,8 @@ const TestArena = () => {
 
             {/* Explanation */}
             {submitted && q.explanation && (
-              <div className="mt-5 p-4 bg-surface-container-low rounded-xl border-l-4 border-secondary">
-                <p className="text-xs font-bold text-secondary uppercase tracking-widest mb-2 flex items-center gap-1">
+              <div className="mt-5 p-4 bg-surface-container-low rounded-xl border-l-4 border-green-500">
+                <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm filled">lightbulb</span> Editorial Explanation
                 </p>
                 <p className="text-sm text-on-surface-variant leading-relaxed">{q.explanation}</p>
@@ -382,7 +382,7 @@ const TestArena = () => {
                   if (i === currentIndex) {
                     btnClass = "bg-primary text-white";
                   } else if (isSubmitted) {
-                    btnClass = isCorrect ? "bg-secondary/20 text-secondary" : "bg-error/20 text-error";
+                    btnClass = isCorrect ? "bg-green-100 text-green-600" : "bg-error/20 text-error";
                   } else if (isAnswered) {
                     btnClass = "bg-primary/10 text-primary";
                   }
@@ -400,7 +400,7 @@ const TestArena = () => {
                 })}
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-on-surface-variant">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-secondary/20 inline-block" /> Correct</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-100 inline-block" /> Correct</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-error/20 inline-block" /> Wrong</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-primary/10 inline-block" /> Answered</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-surface-container inline-block" /> Pending</span>
