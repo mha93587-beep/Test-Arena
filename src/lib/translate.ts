@@ -10,48 +10,64 @@ const SUPPORTED_LANGS: Record<string, string> = {
   ml: 'ml',
 };
 
-async function translateSingle(text: string, langCode: string): Promise<string> {
-  if (!text?.trim()) return text;
-  const query = text.length > 480 ? text.substring(0, 480) : text;
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=en|${langCode}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return text;
-    const data = await res.json() as any;
-    if (
-      data.responseStatus === 200 &&
-      data.responseData?.translatedText &&
-      !data.responseData.translatedText.includes('MYMEMORY WARNING') &&
-      !data.responseData.translatedText.includes('YOU USED ALL AVAILABLE FREE TRANSLATIONS')
-    ) {
-      return data.responseData.translatedText;
-    }
-    return text;
-  } catch {
-    return text;
-  }
+const SEP = ' ||| ';
+const SEP_REGEX = /\s*\|{2,4}\s*/;
+const MAX_CHUNK_CHARS = 3000;
+
+async function translateBlock(text: string, langCode: string): Promise<string> {
+  const url =
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${langCode}&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error(`Google Translate returned ${res.status}`);
+  const data = await res.json() as any;
+  return (data[0] as any[]).map((x: any) => x[0]).filter(Boolean).join('');
 }
 
-async function translateBatch(texts: string[], langCode: string): Promise<string[]> {
-  const results: string[] = [];
-  const CONCURRENCY = 6;
-  for (let i = 0; i < texts.length; i += CONCURRENCY) {
-    const chunk = texts.slice(i, i + CONCURRENCY);
-    const chunkResults = await Promise.all(chunk.map((t) => translateSingle(t, langCode)));
-    results.push(...chunkResults);
-    if (i + CONCURRENCY < texts.length) {
-      await new Promise((r) => setTimeout(r, 80));
+async function translateTexts(texts: string[], langCode: string): Promise<string[]> {
+  const results: string[] = new Array(texts.length).fill('');
+
+  type Batch = { indices: number[]; parts: string[] };
+  const batches: Batch[] = [];
+  let cur: Batch = { indices: [], parts: [] };
+  let curLen = 0;
+
+  for (let i = 0; i < texts.length; i++) {
+    const t = (texts[i] || '').substring(0, 1000);
+    const needed = t.length + SEP.length;
+    if (curLen + needed > MAX_CHUNK_CHARS && cur.indices.length > 0) {
+      batches.push(cur);
+      cur = { indices: [i], parts: [t] };
+      curLen = needed;
+    } else {
+      cur.indices.push(i);
+      cur.parts.push(t);
+      curLen += needed;
     }
   }
+  if (cur.indices.length > 0) batches.push(cur);
+
+  for (const batch of batches) {
+    try {
+      const combined = batch.parts.join(SEP);
+      const translated = await translateBlock(combined, langCode);
+      const parts = translated.split(SEP_REGEX);
+      batch.indices.forEach((idx, j) => {
+        results[idx] = parts[j]?.trim() || texts[idx];
+      });
+    } catch {
+      batch.indices.forEach((idx) => { results[idx] = texts[idx]; });
+    }
+  }
+
   return results;
 }
 
 export async function translateTestData(
   testData: { test: any; questions: any[] },
-  targetLangCode: string
+  targetLangCode: string,
 ): Promise<{ test: any; questions: any[] }> {
   const langCode = SUPPORTED_LANGS[targetLangCode];
-  if (!langCode) throw new Error(`Language ${targetLangCode} not supported for free translation`);
+  if (!langCode) throw new Error(`Language ${targetLangCode} not supported`);
 
   const { test, questions } = testData;
 
@@ -66,11 +82,10 @@ export async function translateTestData(
     ]),
   ];
 
-  const translated = await translateBatch(toTranslate, langCode);
+  const translated = await translateTexts(toTranslate, langCode);
 
   let idx = 0;
   const translatedTest = { ...test, title: translated[idx++] };
-
   const translatedQuestions = questions.map((q: any) => ({
     ...q,
     text: translated[idx++],
