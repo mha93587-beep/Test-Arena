@@ -1,15 +1,12 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema.js';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-export const db = drizzle(pool, { schema });
+const sql = neon(process.env.NEON_DATABASE_URL!);
+export const db = drizzle(sql, { schema });
 
 export async function initDb() {
-  await pool.query(`
+  await sql`
     CREATE TABLE IF NOT EXISTS tests (
       id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,
@@ -20,9 +17,9 @@ export async function initDb() {
       is_public BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `);
+  `;
 
-  await pool.query(`
+  await sql`
     CREATE TABLE IF NOT EXISTS questions (
       id SERIAL PRIMARY KEY,
       test_id INTEGER NOT NULL REFERENCES tests(id),
@@ -34,9 +31,9 @@ export async function initDb() {
       hint TEXT,
       section TEXT
     )
-  `);
+  `;
 
-  await pool.query(`
+  await sql`
     CREATE TABLE IF NOT EXISTS sessions (
       id SERIAL PRIMARY KEY,
       test_id INTEGER NOT NULL REFERENCES tests(id),
@@ -45,9 +42,9 @@ export async function initDb() {
       score INTEGER,
       total INTEGER
     )
-  `);
+  `;
 
-  await pool.query(`
+  await sql`
     CREATE TABLE IF NOT EXISTS session_answers (
       id SERIAL PRIMARY KEY,
       session_id INTEGER NOT NULL REFERENCES sessions(id),
@@ -56,9 +53,9 @@ export async function initDb() {
       is_correct BOOLEAN,
       time_taken_seconds INTEGER
     )
-  `);
+  `;
 
-  await pool.query(`
+  await sql`
     CREATE TABLE IF NOT EXISTS test_translations (
       id SERIAL PRIMARY KEY,
       test_id INTEGER NOT NULL REFERENCES tests(id),
@@ -66,7 +63,7 @@ export async function initDb() {
       translated_data JSONB NOT NULL,
       UNIQUE(test_id, language)
     )
-  `);
+  `;
 
   console.log('Database tables ready.');
 }

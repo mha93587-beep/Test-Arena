@@ -45,3 +45,4 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_Y8emQuJgX7zW@ep-cool-recipe-a1uxnge1-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
