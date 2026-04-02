@@ -65,6 +65,7 @@ const TestArena = () => {
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const { data, isLoading, error, isFetching } = useQuery<TestData>({
     queryKey: [`/api/tests/${testId}?lang=${lang}`],
@@ -75,6 +76,46 @@ const TestArena = () => {
     const interval = setInterval(() => setTotalSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Stop speech whenever question changes or on unmount
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, [currentIndex]);
+
+  useEffect(() => {
+    return () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); };
+  }, []);
+
+  const SPEECH_LANG_MAP: Record<string, string> = {
+    en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN', te: 'te-IN',
+    mr: 'mr-IN', ta: 'ta-IN', ur: 'ur-PK', gu: 'gu-IN',
+    kn: 'kn-IN', ml: 'ml-IN',
+  };
+
+  const handleSpeak = useCallback(() => {
+    if (!('speechSynthesis' in window)) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    const q = data?.questions[currentIndex];
+    if (!q) return;
+    const optionText = q.options.map((o) => `Option ${o.label}: ${o.text}`).join('. ');
+    const fullText = `Question ${currentIndex + 1}. ${q.text}. ${optionText}`;
+    const utterance = new SpeechSynthesisUtterance(fullText);
+    utterance.lang = SPEECH_LANG_MAP[lang] || 'en-IN';
+    utterance.rate = 0.88;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }, [isSpeaking, data, currentIndex, lang]);
 
   const handleSelect = useCallback((label: string) => {
     if (submitted) return;
@@ -312,9 +353,24 @@ const TestArena = () => {
               <img src={q.imageUrl} alt="Question image" className="w-full max-h-48 object-cover rounded-xl mb-4" />
             )}
 
-            <h2 className="font-headline font-bold text-on-surface text-base md:text-lg leading-relaxed mb-6">
-              Q{currentIndex + 1}. {q.text}
-            </h2>
+            <div className="flex items-start gap-3 mb-6">
+              <h2 className="font-headline font-bold text-on-surface text-base md:text-lg leading-relaxed flex-1">
+                Q{currentIndex + 1}. {q.text}
+              </h2>
+              <button
+                onClick={handleSpeak}
+                title={isSpeaking ? "Stop reading" : "Read question aloud"}
+                className={`flex-shrink-0 mt-0.5 w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm border ${
+                  isSpeaking
+                    ? "bg-primary text-white border-primary animate-pulse"
+                    : "bg-surface-container text-primary border-primary/20 hover:bg-primary/10 hover:border-primary/50"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px] filled">
+                  {isSpeaking ? "stop_circle" : "volume_up"}
+                </span>
+              </button>
+            </div>
 
             <div className="space-y-3">
               {q.options.map((opt) => (
