@@ -11,6 +11,23 @@ interface GeneratedQuestion {
   hint?: string;
 }
 
+function stripMarkdownAndParseJson(text: string): any {
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try { return JSON.parse(objMatch[0]); } catch {}
+  }
+  const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
+    try { return JSON.parse(arrMatch[0]); } catch {}
+  }
+  throw new Error('Could not parse JSON from Gemini response');
+}
+
 export async function generateQuestions(
   topic: string,
   examType: string,
@@ -58,13 +75,8 @@ Requirements:
     contents: prompt,
   });
   const text = response.text?.trim() || '';
-
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure');
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = stripMarkdownAndParseJson(text);
   if (!Array.isArray(parsed)) throw new Error('Expected array of questions');
-
   return parsed.slice(0, count);
 }
 
@@ -104,28 +116,26 @@ export async function translateTest(
   };
   const targetLanguage = langMap[targetLanguageCode] || targetLanguageCode;
 
-  const prompt = `You are an expert translator. Translate the following exam test data into ${targetLanguage}.
-Maintain the exact JSON structure, only translating the text content (title, topic, question text, option texts, explanations, hints, sections).
-Do NOT translate keys, IDs, or option labels (A, B, C, D).
+  const prompt = `You are an expert translator specializing in educational content.
+Translate the following exam test data into ${targetLanguage}.
+
+IMPORTANT RULES:
+- Maintain the EXACT same JSON structure
+- Only translate text values: title, topic, question text, option texts, explanations, hints, sections
+- Do NOT add any language codes, suffixes like "(hi)" or "(${targetLanguageCode})" to translated text
+- Do NOT translate: JSON keys, id fields, correctAnswer labels (A, B, C, D)
+- Do NOT add markdown, code blocks, or any explanation outside the JSON
+- Respond with ONLY a valid JSON object
 
 Original JSON:
 ${JSON.stringify(testData)}
 
-STRICT JSON FORMAT - respond ONLY with a valid JSON object matching the original structure:`;
+Respond with ONLY the translated JSON object:`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-    });
-    const text = response.text?.trim() || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure for translation');
-
-    return JSON.parse(jsonMatch[0]);
-  } catch (error: any) {
-    console.error('Translation error:', error);
-    throw error;
-  }
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: prompt,
+  });
+  const text = response.text?.trim() || '';
+  return stripMarkdownAndParseJson(text);
 }

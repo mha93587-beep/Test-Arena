@@ -24,6 +24,23 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+function stripMarkdownAndParseJson(text: string): any {
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try { return JSON.parse(objMatch[0]); } catch {}
+  }
+  const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
+    try { return JSON.parse(arrMatch[0]); } catch {}
+  }
+  throw new Error('Could not parse JSON from Gemini response');
+}
+
 async function generateQuestionsAI(
   env: CfEnv,
   topic: string,
@@ -73,9 +90,7 @@ Requirements:
     contents: prompt,
   });
   const text = response.text?.trim() || '';
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure');
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = stripMarkdownAndParseJson(text);
   if (!Array.isArray(parsed)) throw new Error('Expected array of questions');
   return parsed.slice(0, count);
 }
@@ -87,23 +102,29 @@ async function translateTestAI(env: CfEnv, testData: unknown, targetLanguageCode
     ta: 'Tamil', ur: 'Urdu', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam',
   };
   const targetLanguage = langMap[targetLanguageCode] || targetLanguageCode;
-  const prompt = `You are an expert translator. Translate the following exam test data into ${targetLanguage}.
-Maintain the exact JSON structure, only translating the text content (title, topic, question text, option texts, explanations, hints, sections).
-Do NOT translate keys, IDs, or option labels (A, B, C, D).
+
+  const prompt = `You are an expert translator specializing in educational content.
+Translate the following exam test data into ${targetLanguage}.
+
+IMPORTANT RULES:
+- Maintain the EXACT same JSON structure
+- Only translate text values: title, topic, question text, option texts, explanations, hints, sections
+- Do NOT add any language codes, suffixes like "(hi)" or "(${targetLanguageCode})" to translated text
+- Do NOT translate: JSON keys, id fields, correctAnswer labels (A, B, C, D)
+- Do NOT add markdown, code blocks, or any explanation outside the JSON
+- Respond with ONLY a valid JSON object
 
 Original JSON:
 ${JSON.stringify(testData)}
 
-STRICT JSON FORMAT - respond ONLY with a valid JSON object matching the original structure:`;
+Respond with ONLY the translated JSON object:`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.0-flash',
     contents: prompt,
   });
   const text = response.text?.trim() || '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Gemini returned invalid JSON structure for translation');
-  return JSON.parse(jsonMatch[0]);
+  return stripMarkdownAndParseJson(text);
 }
 
 async function extractTextFromBase64AI(env: CfEnv, base64: string, mimeType: string) {
@@ -127,6 +148,67 @@ async function extractTextFromUrlAI(env: CfEnv, url: string) {
     contents: `Fetch and summarize the main educational content from this URL for exam preparation purposes: ${url}`,
   });
   return response.text || '';
+}
+
+export async function generateSitemapXml(env: CfEnv): Promise<string> {
+  const DOMAIN = 'https://testarena.ai';
+  const LANGUAGES = ['en', 'hi', 'bn', 'te', 'mr', 'ta', 'ur', 'gu', 'kn', 'ml'];
+  const examSlugs = [
+    'ssc-cgl', 'ssc-chsl', 'ssc-mts', 'ssc-gd', 'ssc-cpo',
+    'railway-rrb-ntpc', 'railway-rrb-group-d', 'railway-rrb-je',
+    'upsc-cse', 'upsc-csat', 'upsc-nda', 'upsc-cds',
+    'ibps-po', 'ibps-clerk', 'sbi-po', 'sbi-clerk', 'rbi-grade-b',
+    'gate-cs', 'ugc-net', 'neet', 'jee-main', 'jee-advanced',
+    'cat', 'clat', 'ctet', 'kvs', 'nda',
+  ];
+
+  const db = getDb(env);
+  const allTests = await db.select().from(tests);
+
+  const urls: { loc: string; priority: string; changefreq: string }[] = [
+    { loc: `${DOMAIN}/`, priority: '1.0', changefreq: 'daily' },
+    { loc: `${DOMAIN}/discovery`, priority: '0.9', changefreq: 'hourly' },
+    ...examSlugs.map((slug) => ({
+      loc: `${DOMAIN}/exam/${slug}`,
+      priority: '0.8',
+      changefreq: 'weekly',
+    })),
+  ];
+
+  for (const test of allTests) {
+    const slug = `${test.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')}-${test.id}`;
+    urls.push({ loc: `${DOMAIN}/test-arena/${slug}`, priority: '0.7', changefreq: 'weekly' });
+    for (const lang of LANGUAGES) {
+      if (lang !== 'en') {
+        urls.push({ loc: `${DOMAIN}/test-arena/${slug}?lang=${lang}`, priority: '0.6', changefreq: 'weekly' });
+      }
+    }
+  }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${urls.map((u) => {
+  if (u.loc.includes('/test-arena/')) {
+    const baseUrl = u.loc.split('?')[0];
+    const hreflangs = LANGUAGES.map((lang) =>
+      `      <xhtml:link rel="alternate" hreflang="${lang}" href="${baseUrl}${lang === 'en' ? '' : `?lang=${lang}`}" />`
+    ).join('\n');
+    return `  <url>
+    <loc>${u.loc}</loc>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+${hreflangs}
+  </url>`;
+  }
+  return `  <url>
+    <loc>${u.loc}</loc>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`;
+}).join('\n')}
+</urlset>`;
+
+  return xml;
 }
 
 export async function handleApiRequest(request: Request, env: CfEnv): Promise<Response> {
@@ -197,12 +279,17 @@ export async function handleApiRequest(request: Request, env: CfEnv): Promise<Re
       const qs = await db.select().from(questions).where(eq(questions.testId, testId));
 
       if (lang && lang !== 'en') {
-        const [existing] = await db.select().from(testTranslations)
-          .where(and(eq(testTranslations.testId, testId), eq(testTranslations.language, lang)));
-        if (existing) return json(existing.translatedData);
-        const translated = await translateTestAI(env, { test, questions: qs }, lang);
-        await db.insert(testTranslations).values({ testId, language: lang, translatedData: translated });
-        return json(translated);
+        try {
+          const [existing] = await db.select().from(testTranslations)
+            .where(and(eq(testTranslations.testId, testId), eq(testTranslations.language, lang)));
+          if (existing) return json(existing.translatedData);
+          const translated = await translateTestAI(env, { test, questions: qs }, lang);
+          await db.insert(testTranslations).values({ testId, language: lang, translatedData: translated });
+          return json(translated);
+        } catch (translationErr: any) {
+          console.error('Translation error, falling back to English:', translationErr.message);
+          return json({ test, questions: qs, translationFailed: true });
+        }
       }
       return json({ test, questions: qs });
     }
@@ -252,16 +339,20 @@ export async function handleApiRequest(request: Request, env: CfEnv): Promise<Re
       const ans = await db.select().from(sessionAnswers).where(eq(sessionAnswers.sessionId, sessionId));
 
       if (lang && lang !== 'en') {
-        const [existing] = await db.select().from(testTranslations)
-          .where(and(eq(testTranslations.testId, session.testId), eq(testTranslations.language, lang)));
-        if (existing) {
-          test = (existing.translatedData as any).test;
-          qs = (existing.translatedData as any).questions;
-        } else {
-          const translated = await translateTestAI(env, { test, questions: qs }, lang);
-          await db.insert(testTranslations).values({ testId: session.testId, language: lang, translatedData: translated });
-          test = translated.test;
-          qs = translated.questions;
+        try {
+          const [existing] = await db.select().from(testTranslations)
+            .where(and(eq(testTranslations.testId, session.testId), eq(testTranslations.language, lang)));
+          if (existing) {
+            test = (existing.translatedData as any).test;
+            qs = (existing.translatedData as any).questions;
+          } else {
+            const translated = await translateTestAI(env, { test, questions: qs }, lang);
+            await db.insert(testTranslations).values({ testId: session.testId, language: lang, translatedData: translated });
+            test = translated.test;
+            qs = translated.questions;
+          }
+        } catch (translationErr: any) {
+          console.error('Translation error in results, falling back to English:', translationErr.message);
         }
       }
 

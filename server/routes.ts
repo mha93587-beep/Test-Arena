@@ -111,10 +111,9 @@ router.get('/tests/:testId', async (req, res) => {
           
         if (existingTranslation) {
           console.log('Found existing translation');
-          return res.json({ ...existingTranslation.translatedData, debug_query: req.query });
+          return res.json(existingTranslation.translatedData);
         } else {
           console.log('Translating on the fly...');
-          // Translate on the fly and save
           const originalData = { test, questions: qs };
           const translatedData = await translateTest(originalData, lang);
           
@@ -125,15 +124,15 @@ router.get('/tests/:testId', async (req, res) => {
           });
           
           console.log('Translation saved');
-          return res.json({ ...translatedData, debug_query: req.query });
+          return res.json(translatedData);
         }
-      } catch (dbErr: any) {
-        console.error('DB Error in translation:', dbErr);
-        throw dbErr;
+      } catch (translationErr: any) {
+        console.error('Translation error, falling back to English:', translationErr.message);
+        return res.json({ test, questions: qs, translationFailed: true });
       }
     }
 
-    res.json({ test, questions: qs, debug_query: req.query });
+    res.json({ test, questions: qs });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -210,25 +209,26 @@ router.get('/sessions/:sessionId/results', async (req, res) => {
       const { testTranslations } = await import('./schema.js');
       const { translateTest } = await import('./gemini.js');
       
-      const [existingTranslation] = await db.select().from(testTranslations)
-        .where(and(eq(testTranslations.testId, session.testId), eq(testTranslations.language, lang)));
-        
-      if (existingTranslation) {
-        test = existingTranslation.translatedData.test;
-        qs = existingTranslation.translatedData.questions;
-      } else {
-        // Translate on the fly and save
-        const originalData = { test, questions: qs };
-        const translatedData = await translateTest(originalData, lang);
-        
-        await db.insert(testTranslations).values({
-          testId: session.testId,
-          language: lang,
-          translatedData
-        });
-        
-        test = translatedData.test;
-        qs = translatedData.questions;
+      try {
+        const [existingTranslation] = await db.select().from(testTranslations)
+          .where(and(eq(testTranslations.testId, session.testId), eq(testTranslations.language, lang)));
+          
+        if (existingTranslation) {
+          test = (existingTranslation.translatedData as any).test;
+          qs = (existingTranslation.translatedData as any).questions;
+        } else {
+          const originalData = { test, questions: qs };
+          const translatedData = await translateTest(originalData, lang);
+          await db.insert(testTranslations).values({
+            testId: session.testId,
+            language: lang,
+            translatedData
+          });
+          test = translatedData.test;
+          qs = translatedData.questions;
+        }
+      } catch (translationErr: any) {
+        console.error('Translation error in results, falling back to English:', translationErr.message);
       }
     }
 

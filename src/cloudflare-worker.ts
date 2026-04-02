@@ -1,5 +1,5 @@
 import { render } from './entry-server';
-import { handleApiRequest, CfEnv } from './cf-api';
+import { handleApiRequest, generateSitemapXml, CfEnv } from './cf-api';
 
 const STATIC_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt|xml)$/i;
 
@@ -26,17 +26,36 @@ export default {
       return new Response(res.body, { status: res.status, headers });
     }
 
-    // Static assets (JS, CSS, images etc.) → serve from ASSETS
-    if (STATIC_EXTENSIONS.test(url.pathname) || url.pathname.startsWith('/assets/')) {
-      const assetRes = await env.ASSETS.fetch(request);
-      if (assetRes.status !== 404) return assetRes;
-    }
-
-    // Robots.txt / sitemap.xml → serve as plain text or from ASSETS
+    // Robots.txt
     if (url.pathname === '/robots.txt') {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://testarena.ai/sitemap.xml\n', {
         headers: { 'Content-Type': 'text/plain' },
       });
+    }
+
+    // Sitemap.xml → generate dynamically from DB
+    if (url.pathname === '/sitemap.xml') {
+      try {
+        const xml = await generateSitemapXml(env);
+        return new Response(xml, {
+          headers: {
+            'Content-Type': 'application/xml; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      } catch (err) {
+        console.error('Sitemap generation error:', err);
+        return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>', {
+          status: 200,
+          headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+        });
+      }
+    }
+
+    // Static assets (JS, CSS, images etc.) → serve from ASSETS
+    if (STATIC_EXTENSIONS.test(url.pathname) || url.pathname.startsWith('/assets/')) {
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.status !== 404) return assetRes;
     }
 
     // SSR for all other paths

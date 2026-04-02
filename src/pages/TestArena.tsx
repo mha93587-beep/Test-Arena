@@ -10,7 +10,24 @@ interface Question {
   id: number; text: string; options: Option[]; correctAnswer: string;
   explanation?: string; imageUrl?: string; hint?: string; section?: string;
 }
-interface TestData { test: { title: string; examType: string; difficulty: string }; questions: Question[] }
+interface TestData {
+  test: { title: string; examType: string; difficulty: string };
+  questions: Question[];
+  translationFailed?: boolean;
+}
+
+const LANG_META: Record<string, { name: string; desc: string }> = {
+  en: { name: 'English', desc: 'Take AI-generated mock tests in English.' },
+  hi: { name: 'हिंदी', desc: 'हिंदी में AI-जनित मॉक टेस्ट दें।' },
+  bn: { name: 'বাংলা', desc: 'বাংলায় AI-তৈরি মক টেস্ট দিন।' },
+  te: { name: 'తెలుగు', desc: 'తెలుగులో AI-రూపొందించిన మాక్ టెస్ట్ తీసుకోండి.' },
+  mr: { name: 'मराठी', desc: 'मराठीत AI-निर्मित मॉक टेस्ट द्या.' },
+  ta: { name: 'தமிழ்', desc: 'தமிழில் AI உருவாக்கிய மாக் தேர்வு எழுதுங்கள்.' },
+  ur: { name: 'اردو', desc: 'اردو میں AI سے تیار کردہ ماک ٹیسٹ دیں۔' },
+  gu: { name: 'ગુજરાતી', desc: 'ગુજરાતીમાં AI-જનિત મૉક ટેસ્ટ આપો.' },
+  kn: { name: 'ಕನ್ನಡ', desc: 'ಕನ್ನಡದಲ್ಲಿ AI ರಚಿಸಿದ ಮಾಕ್ ಟೆಸ್ಟ್ ತೆಗೆದುಕೊಳ್ಳಿ.' },
+  ml: { name: 'മലയാളം', desc: 'മലയാളത്തിൽ AI നിർമ്മിത മോക്ക് ടെസ്റ്റ് എടുക്കൂ.' },
+};
 
 const LANGUAGES = [
   { code: 'en', name: 'English' },
@@ -161,7 +178,12 @@ const TestArena = () => {
       <div className="flex items-center justify-center min-h-[calc(100vh-72px)]">
         <div className="text-center">
           <span className="material-symbols-outlined text-5xl text-error block mb-3">error</span>
-          <h2 className="font-headline font-bold text-xl mb-2">Test not found</h2>
+          <h2 className="font-headline font-bold text-xl mb-2">
+            {error ? "Failed to load test" : "Test not found"}
+          </h2>
+          <p className="text-on-surface-variant mb-4 text-sm max-w-xs mx-auto">
+            {error ? "There was a problem fetching this test. Please try again." : "This test could not be found."}
+          </p>
           <button onClick={() => navigate("/")} className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:opacity-90 mt-2">
             Back to Dashboard
           </button>
@@ -200,23 +222,28 @@ const TestArena = () => {
   const mins = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
   const secs = String(totalSeconds % 60).padStart(2, "0");
 
+  const langMeta = LANG_META[lang] || LANG_META['en'];
+  const metaDesc = `${test.title} | ${questions.length} ${test.difficulty} ${langMeta.desc}`;
+
   return (
     <>
       <Helmet>
+        <html lang={lang} />
         <title>{`${test.title} – Test Arena | testarena.ai`}</title>
-        <meta name="description" content={`Take the ${test.title} test on Test Arena. ${questions.length} ${test.difficulty} questions for ${test.examType}.`} />
+        <meta name="description" content={metaDesc} />
         <meta property="og:title" content={`${test.title} – Test Arena`} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://testarena.ai/test-arena/${slug}${lang !== 'en' ? `?lang=${lang}` : ''}`} />
         <link rel="canonical" href={`https://testarena.ai/test-arena/${slug}${lang !== 'en' ? `?lang=${lang}` : ''}`} />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}`} hrefLang="en" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=hi`} hrefLang="hi" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=bn`} hrefLang="bn" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=te`} hrefLang="te" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=mr`} hrefLang="mr" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=ta`} hrefLang="ta" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=ur`} hrefLang="ur" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=gu`} hrefLang="gu" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=kn`} hrefLang="kn" />
-        <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}?lang=ml`} hrefLang="ml" />
+        {LANGUAGES.map((l) => (
+          <link
+            key={l.code}
+            rel="alternate"
+            href={`https://testarena.ai/test-arena/${slug}${l.code !== 'en' ? `?lang=${l.code}` : ''}`}
+            hrefLang={l.code}
+          />
+        ))}
         <link rel="alternate" href={`https://testarena.ai/test-arena/${slug}`} hrefLang="x-default" />
       </Helmet>
       <div className="min-h-[calc(100vh-72px)] flex flex-col relative">
@@ -226,6 +253,12 @@ const TestArena = () => {
               <span className="material-symbols-outlined text-primary animate-spin">refresh</span>
               <span className="font-medium text-on-surface">Translating test...</span>
             </div>
+          </div>
+        )}
+        {data.translationFailed && lang !== 'en' && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2 text-amber-700 text-sm">
+            <span className="material-symbols-outlined text-base">info</span>
+            Translation unavailable for this language. Showing content in English.
           </div>
         )}
         {/* Context Header */}
