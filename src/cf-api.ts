@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 import {
   tests, questions, sessions, sessionAnswers, testTranslations,
 } from '../server/schema';
+import { translateTestData } from './lib/translate';
 
 export interface CfEnv {
   NEON_DATABASE_URL: string;
@@ -95,37 +96,6 @@ Requirements:
   return parsed.slice(0, count);
 }
 
-async function translateTestAI(env: CfEnv, testData: unknown, targetLanguageCode: string) {
-  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  const langMap: Record<string, string> = {
-    en: 'English', hi: 'Hindi', bn: 'Bengali', te: 'Telugu', mr: 'Marathi',
-    ta: 'Tamil', ur: 'Urdu', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam',
-  };
-  const targetLanguage = langMap[targetLanguageCode] || targetLanguageCode;
-
-  const prompt = `You are an expert translator specializing in educational content.
-Translate the following exam test data into ${targetLanguage}.
-
-IMPORTANT RULES:
-- Maintain the EXACT same JSON structure
-- Only translate text values: title, topic, question text, option texts, explanations, hints, sections
-- Do NOT add any language codes, suffixes like "(hi)" or "(${targetLanguageCode})" to translated text
-- Do NOT translate: JSON keys, id fields, correctAnswer labels (A, B, C, D)
-- Do NOT add markdown, code blocks, or any explanation outside the JSON
-- Respond with ONLY a valid JSON object
-
-Original JSON:
-${JSON.stringify(testData)}
-
-Respond with ONLY the translated JSON object:`;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: prompt,
-  });
-  const text = response.text?.trim() || '';
-  return stripMarkdownAndParseJson(text);
-}
 
 async function extractTextFromBase64AI(env: CfEnv, base64: string, mimeType: string) {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
@@ -283,7 +253,7 @@ export async function handleApiRequest(request: Request, env: CfEnv): Promise<Re
           const [existing] = await db.select().from(testTranslations)
             .where(and(eq(testTranslations.testId, testId), eq(testTranslations.language, lang)));
           if (existing) return json(existing.translatedData);
-          const translated = await translateTestAI(env, { test, questions: qs }, lang);
+          const translated = await translateTestData({ test, questions: qs }, lang);
           await db.insert(testTranslations).values({ testId, language: lang, translatedData: translated });
           return json(translated);
         } catch (translationErr: any) {
@@ -346,7 +316,7 @@ export async function handleApiRequest(request: Request, env: CfEnv): Promise<Re
             test = (existing.translatedData as any).test;
             qs = (existing.translatedData as any).questions;
           } else {
-            const translated = await translateTestAI(env, { test, questions: qs }, lang);
+            const translated = await translateTestData({ test, questions: qs }, lang);
             await db.insert(testTranslations).values({ testId: session.testId, language: lang, translatedData: translated });
             test = translated.test;
             qs = translated.questions;

@@ -103,7 +103,7 @@ router.get('/tests/:testId', async (req, res) => {
     if (lang && lang !== 'en') {
       console.log(`Translation requested for lang: ${lang}`);
       const { testTranslations } = await import('./schema.js');
-      const { translateTest } = await import('./gemini.js');
+      const { translateTestData } = await import('../src/lib/translate.js');
       
       try {
         const [existingTranslation] = await db.select().from(testTranslations)
@@ -113,9 +113,8 @@ router.get('/tests/:testId', async (req, res) => {
           console.log('Found existing translation');
           return res.json(existingTranslation.translatedData);
         } else {
-          console.log('Translating on the fly...');
-          const originalData = { test, questions: qs };
-          const translatedData = await translateTest(originalData, lang);
+          console.log('Translating on the fly with free translation...');
+          const translatedData = await translateTestData({ test, questions: qs }, lang);
           
           await db.insert(testTranslations).values({
             testId,
@@ -207,7 +206,7 @@ router.get('/sessions/:sessionId/results', async (req, res) => {
     // If language is requested and it's not English
     if (lang && lang !== 'en') {
       const { testTranslations } = await import('./schema.js');
-      const { translateTest } = await import('./gemini.js');
+      const { translateTestData } = await import('../src/lib/translate.js');
       
       try {
         const [existingTranslation] = await db.select().from(testTranslations)
@@ -217,8 +216,7 @@ router.get('/sessions/:sessionId/results', async (req, res) => {
           test = (existingTranslation.translatedData as any).test;
           qs = (existingTranslation.translatedData as any).questions;
         } else {
-          const originalData = { test, questions: qs };
-          const translatedData = await translateTest(originalData, lang);
+          const translatedData = await translateTestData({ test, questions: qs }, lang);
           await db.insert(testTranslations).values({
             testId: session.testId,
             language: lang,
