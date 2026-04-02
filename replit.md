@@ -40,6 +40,35 @@ Runs on port 5000. Express handles:
 - `/robots.txt` — Robots file  
 - `/*` — Vite middleware (dev) or static files (prod) with SSR
 
+## Build Commands
+
+```bash
+npm run build          # builds client → dist/client/ + worker → dist/client/_worker.js
+npm run build:worker   # builds only the Cloudflare Worker
+```
+
+## Cloudflare Pages Deployment
+
+Build output: `dist/client/`  
+Build command: `npm run build`
+
+Files produced:
+- `dist/client/index.html` — SPA shell (with `<!--app-head-->` SSR placeholder)
+- `dist/client/assets/` — hashed JS/CSS/fonts
+- `dist/client/_worker.js` — Cloudflare Pages Worker (React SSR + API + DB + AI, all bundled)
+
+**Worker handles:**
+- `/api/*` → edge API via `src/cf-api.ts` (no Express, uses native Fetch + FormData)
+- `/*` → serves static asset via `ASSETS` binding, or falls back to SSR-rendered HTML
+
+**Required environment variables in Cloudflare Pages dashboard:**
+- `NEON_DATABASE_URL`
+- `GEMINI_API_KEY`
+
+**wrangler.toml settings:**
+- `compatibility_flags = ["nodejs_compat"]` (needed for `@google/genai`)
+- `pages_build_output_dir = "dist/client"`
+
 ## Environment Variables
 
 - `NEON_DATABASE_URL` — Neon PostgreSQL connection string

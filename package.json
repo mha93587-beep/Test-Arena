@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.worker.config.ts",
     "build:dev": "vite build --mode development",
+    "build:worker": "vite build --config vite.worker.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
